@@ -8,6 +8,7 @@
 #include "Eigen-3.3/Eigen/QR"
 #include "MPC.h"
 #include "json.hpp"
+#include "Utils.h"
 
 // for convenience
 using json = nlohmann::json;
@@ -16,6 +17,10 @@ using json = nlohmann::json;
 constexpr double pi() { return M_PI; }
 double deg2rad(double x) { return x * pi() / 180; }
 double rad2deg(double x) { return x * 180 / pi(); }
+
+// Define N and dt
+constexpr int N = 25;
+constexpr double dt = 0.04;
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -33,7 +38,7 @@ string hasData(string s) {
 }
 
 // Evaluate a polynomial.
-double polyeval(Eigen::VectorXd coeffs, double x) {
+double polyeval(const Eigen::VectorXd& coeffs, double x) {
   double result = 0.0;
   for (int i = 0; i < coeffs.size(); i++) {
     result += coeffs[i] * pow(x, i);
@@ -44,7 +49,7 @@ double polyeval(Eigen::VectorXd coeffs, double x) {
 // Fit a polynomial.
 // Adapted from
 // https://github.com/JuliaMath/Polynomials.jl/blob/master/src/Polynomials.jl#L676-L716
-Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
+Eigen::VectorXd polyfit(const Eigen::VectorXd& xvals, const Eigen::VectorXd& yvals,
                         int order) {
   assert(xvals.size() == yvals.size());
   assert(order >= 1 && order <= xvals.size() - 1);
@@ -92,6 +97,11 @@ int main() {
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
 
+          // fitting polyline for the given waypoints
+          Eigen::Map<Eigen::VectorXd> xvals(ptsx.data(), ptsx.size());
+          Eigen::Map<Eigen::VectorXd> yvals(ptsy.data(), ptsy.size());
+          Eigen::VectorXd coeffs = polyfit(xvals, yvals, 3);
+
           /*
           * TODO: Calculate steering angle and throttle using MPC.
           *
@@ -123,6 +133,21 @@ int main() {
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
+          Eigen::MatrixXd waypoints(3, N);
+          double waypoints_x_start = ptsx[0];
+          double waypoints_x_length = ptsx[ptsx.size() - 1] - waypoints_x_start;
+          double step = waypoints_x_length / (N - 1);
+          for (int t = 0; t < N; ++t) {
+            double x = waypoints_x_start + t * step;
+            waypoints.col(t) << x,
+                                polyeval(coeffs, x),
+                                1;
+          }
+          Eigen::MatrixXd trans_waypoints = mapCoordinates2VechileCoordinates(px, py, psi, waypoints);
+          for (int i = 0; i < N; ++i) {
+            next_x_vals.push_back(trans_waypoints(0, i));
+            next_y_vals.push_back(trans_waypoints(1, i));
+          }
 
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
