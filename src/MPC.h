@@ -6,6 +6,10 @@
 
 using namespace std;
 
+// Define N and dt
+constexpr int N = 25;
+constexpr double dt = 0.1;
+
 class MPC {
  public:
   MPC();

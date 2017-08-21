@@ -4,7 +4,7 @@
 
 #include "Utils.h"
 
-Eigen::MatrixXd mapCoordinates2VechileCoordinates(
+Eigen::MatrixXd mapCoordinates2VehicleCoordinates(
     double vehicle_x, double vehicle_y, double vehicle_orientation,
     const Eigen::MatrixXd& points_in_map) {
   // denotes vx = vehicle_x, vy = vehicle_y, vpsi = vehicle_orientation for short

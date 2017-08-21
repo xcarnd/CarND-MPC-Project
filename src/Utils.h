@@ -17,6 +17,15 @@ inline double normalize_angle(double angle) {
 }
 
 /**
+ * convert mph to mps.
+ *
+ * 1MPH approx. = 0.447 MPS
+ */
+inline double mph_to_mps(double mph) {
+  return 0.447 * mph;
+}
+
+/**
  * Convert map coordinates to vehicle coordinates.
  *
  * Transformation from map coordinates to vehicle coordinates can be carried out by
@@ -34,7 +43,7 @@ inline double normalize_angle(double angle) {
  * @param vehicle_orientation: the orientation of the vehicle, in map coordinate
  * @param points_in_map: points to be transformed, in map coordinate
  */
-Eigen::MatrixXd mapCoordinates2VechileCoordinates(
+Eigen::MatrixXd mapCoordinates2VehicleCoordinates(
     double vehicle_x, double vehicle_y, double vehicle_orientation,
     const Eigen::MatrixXd& points_in_map);
 
