@@ -1,3 +1,27 @@
+/**
+ * To dealing with latency:
+ *
+ * Say if there are 100ms latency since the command is issued to the
+ * command is actually carried out.
+ *
+ * That's why dt is set to be at least 0.1: No meaningful re-decision
+ * can be issued again within 0.1 second.
+ *
+ * The MPC will get feedback from the sensors, including the currently
+ * throttle value and steering angle. In the very first 0.1 second, no
+ * meaningful changes can be performed on these inputs. The MPC
+ * predicted trajectory shall reflect this fact.
+ *
+ * The way I used for achieving this is, recording inputs from last
+ * iteration and set them as the initial inputs of current
+ * iteration. Make sure they are unchanged during IPOPT optimization
+ * by setting lowerbound and upperbound to be the same as the initial
+ * values.
+ *
+ * Because delta and a in the first update will be unchanged, the
+ * delta and a in the second update is returned as the next inputs to
+ * the vehicle.
+ */
 #include "MPC.h"
 #include <cppad/cppad.hpp>
 #include <cppad/ipopt/solve.hpp>
@@ -32,7 +56,7 @@ double deg2rad(double x) { return x * pi() / 180; }
 // This is the length from front to CoG that has a similar radius.
 constexpr double Lf = 2.67;
 
-double v_ref = mph_to_mps(15.0); 
+double v_ref = mph_to_mps(50.0);
 
 class FG_eval {
  public:
@@ -49,8 +73,6 @@ class FG_eval {
       d.push_back(coeffs(i) * i);
     }
     this->coeffs_d = Eigen::Map<Eigen::VectorXd>(d.data(), d.size());
-    //    std::cout<<"coeffs"<<this->coeffs<<std::endl;
-    //    std::cout<<"coeffs_d"<<this->coeffs_d<<std::endl;
   }
 
   
@@ -81,14 +103,14 @@ class FG_eval {
 
     // minimize actuators used
     for (std::size_t i = 0; i < N - 1; ++i) {
-      fg[0] += 100 * CppAD::pow(vars[delta_start + i], 2);
-      fg[0] += 10 * CppAD::pow(vars[a_start + i], 2);
+      fg[0] += 500 * CppAD::pow(vars[delta_start + i], 2);
+      fg[0] += CppAD::pow(3 * vars[a_start + i], 2);
     }
 
     // minimize the gap between two consecutive inputs
     for (std::size_t i = 0; i < N - 2; ++i) {
-      fg[0] += 500 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
-      fg[0] += 50 * CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
+      fg[0] += 100 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
+      fg[0] += 10 * CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
     }
 
     fg[1 + x_start] = vars[x_start];
@@ -155,8 +177,10 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   double v = state(3);
   double cte = state(4);
   double epsi = state(5);
+  double delta = state(6);
+  double a = state(7);
 
-  std::cout<<x<<" "<<y<<" "<<psi<<" "<<v<<" "<<cte<<" "<<epsi<<std::endl;
+  std::cout<<x<<" "<<y<<" "<<psi<<" "<<v<<" "<<cte<<" "<<epsi<<" "<<delta<<" "<<a<<std::endl;
 
   // TODO: Set the number of model variables (includes both states and inputs).
   // For example: If the state is a 4 element vector, the actuators is a 2
@@ -180,6 +204,8 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   vars[v_start] = v;
   vars[cte_start] = cte;
   vars[epsi_start] = epsi;
+  vars[delta_start] = delta;
+  vars[a_start] = a;
 
   Dvector vars_lowerbound(n_vars);
   Dvector vars_upperbound(n_vars);
@@ -196,6 +222,11 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     vars_lowerbound[i] = -1;
     vars_upperbound[i] = 1;
   }
+  // fix the first delta & a
+  vars_lowerbound[delta_start] = delta;
+  vars_upperbound[delta_start] = delta;
+  vars_lowerbound[a_start] = a;
+  vars_upperbound[a_start] = a;
 
   // Lower and upper limits for the constraints
   // Should be 0 besides initial state.
@@ -261,76 +292,77 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
   // creates a 2 element double vector.
 
-  std::vector<double> x_vals;
-  std::vector<double> y_vals;
-  std::vector<double> psi_vals;
-  std::vector<double> v_vals;
-  std::vector<double> cte_vals;
-  std::vector<double> epsi_vals;
-  std::vector<double> delta_vals;
-  std::vector<double> a_vals;
+  // debugging codes
+  // std::vector<double> x_vals;
+  // std::vector<double> y_vals;
+  // std::vector<double> psi_vals;
+  // std::vector<double> v_vals;
+  // std::vector<double> cte_vals;
+  // std::vector<double> epsi_vals;
+  // std::vector<double> delta_vals;
+  // std::vector<double> a_vals;
   
-  std::cout<<"x = [";
-  for (std::size_t t = 0; t < N; ++t) {
-    std::cout<<solution.x[x_start + t]<<",";
-    x_vals.push_back(solution.x[x_start + t]);
-  }
-  std::cout<<"]"<<std::endl;
+  // std::cout<<"x = [";
+  // for (std::size_t t = 0; t < N; ++t) {
+  //   std::cout<<solution.x[x_start + t]<<",";
+  //   x_vals.push_back(solution.x[x_start + t]);
+  // }
+  // std::cout<<"]"<<std::endl;
 
-  std::cout<<"y = [";
-  for (std::size_t t = 0; t < N; ++t) {
-    std::cout<<solution.x[y_start + t]<<",";
-    y_vals.push_back(solution.x[y_start + t]);
-  }
-  std::cout<<"]"<<std::endl;
+  // std::cout<<"y = [";
+  // for (std::size_t t = 0; t < N; ++t) {
+  //   std::cout<<solution.x[y_start + t]<<",";
+  //   y_vals.push_back(solution.x[y_start + t]);
+  // }
+  // std::cout<<"]"<<std::endl;
 
-  std::cout<<"psi = [";
-  for (std::size_t t = 0; t < N; ++t) {
-    std::cout<<solution.x[psi_start + t]<<",";
-    psi_vals.push_back(solution.x[psi_start + t]);
-  }
-  std::cout<<"]"<<std::endl;
+  // std::cout<<"psi = [";
+  // for (std::size_t t = 0; t < N; ++t) {
+  //   std::cout<<solution.x[psi_start + t]<<",";
+  //   psi_vals.push_back(solution.x[psi_start + t]);
+  // }
+  // std::cout<<"]"<<std::endl;
 
-  std::cout<<"v = [";
-  for (std::size_t t = 0; t < N; ++t) {
-    std::cout<<solution.x[v_start + t]<<",";
-    v_vals.push_back(solution.x[v_start + t]);
-  }
-  std::cout<<"]"<<std::endl;
+  // std::cout<<"v = [";
+  // for (std::size_t t = 0; t < N; ++t) {
+  //   std::cout<<solution.x[v_start + t]<<",";
+  //   v_vals.push_back(solution.x[v_start + t]);
+  // }
+  // std::cout<<"]"<<std::endl;
   
-  std::cout<<"cte = [";
-  for (std::size_t t = 0; t < N; ++t) {
-    std::cout<<solution.x[cte_start + t]<<",";
-    cte_vals.push_back(solution.x[cte_start + t]);
-  }
-  std::cout<<"]"<<std::endl;
+  // std::cout<<"cte = [";
+  // for (std::size_t t = 0; t < N; ++t) {
+  //   std::cout<<solution.x[cte_start + t]<<",";
+  //   cte_vals.push_back(solution.x[cte_start + t]);
+  // }
+  // std::cout<<"]"<<std::endl;
   
-  std::cout<<"epsi = [";
-  for (std::size_t t = 0; t < N; ++t) {
-    std::cout<<solution.x[epsi_start + t]<<",";
-    epsi_vals.push_back(solution.x[epsi_start + t]);
-  }
-  std::cout<<"]"<<std::endl;
+  // std::cout<<"epsi = [";
+  // for (std::size_t t = 0; t < N; ++t) {
+  //   std::cout<<solution.x[epsi_start + t]<<",";
+  //   epsi_vals.push_back(solution.x[epsi_start + t]);
+  // }
+  // std::cout<<"]"<<std::endl;
   
-  std::cout<<"delta = [";
-  for (std::size_t t = 0; t < N - 1; ++t) {
-    std::cout<<solution.x[delta_start + t]<<",";
-    delta_vals.push_back(solution.x[delta_start + t]);
-  }
-  std::cout<<"]"<<std::endl;
+  // std::cout<<"delta = [";
+  // for (std::size_t t = 0; t < N - 1; ++t) {
+  //   std::cout<<solution.x[delta_start + t]<<",";
+  //   delta_vals.push_back(solution.x[delta_start + t]);
+  // }
+  // std::cout<<"]"<<std::endl;
 
-  std::cout<<"a = [";
-  for (std::size_t t = 0; t < N - 1; ++t) {
-    std::cout<<solution.x[a_start + t]<<",";
-    a_vals.push_back(solution.x[a_start + t]);
-  }
-  std::cout<<"]"<<std::endl;
+  // std::cout<<"a = [";
+  // for (std::size_t t = 0; t < N - 1; ++t) {
+  //   std::cout<<solution.x[a_start + t]<<",";
+  //   a_vals.push_back(solution.x[a_start + t]);
+  // }
+  // std::cout<<"]"<<std::endl;
 
-  std::cout<<std::endl;
+  // std::cout<<std::endl;
 
-  std::cout<<solution.x[delta_start]<<"  --  "<<solution.x[a_start]<<std::endl;
+  // std::cout<<solution.x[delta_start + 1]<<"  --  "<<solution.x[a_start + 1]<<std::endl;
   
-  std::vector<double> result = {solution.x[delta_start], solution.x[a_start]};
+  std::vector<double> result = {solution.x[delta_start + 1], solution.x[a_start + 1]};
   for (std::size_t t = 0; t < N; ++t) {
     result.push_back(solution.x[x_start + t]);
   }

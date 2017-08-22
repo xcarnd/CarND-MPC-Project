@@ -72,7 +72,11 @@ int main() {
   // MPC is initialized here!
   MPC mpc;
 
-  h.onMessage([&mpc](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+  double prev_delta = 0.0;
+  double prev_a = 0.0;
+
+  h.onMessage([&mpc, &prev_delta, &prev_a]
+              (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -117,15 +121,15 @@ int main() {
           // cte is calculated as y_ref - py (y_ref = f(px) where f is the polynomial fit)
           // epsi is calculated as psi_ref - psi = psi_ref (psi_ref = atan(f'(px)))
           double y_ref = polyeval(coeffs, px);
-          double psi_ref = polyeval(coeffs_d, px);
+          double psi_ref = std::atan(polyeval(coeffs_d, px));
           
-          Eigen::VectorXd initial_state(6);
+          Eigen::VectorXd initial_state(8);
           initial_state <<
               0, 0,
               0,
               mph_to_mps(v),
-              (y_ref - py),
-              (psi_ref - psi);
+              (y_ref - py), (psi_ref - psi),
+              prev_delta, prev_a;
 
           /*
           * TODO: Calculate steering angle and throttle using MPC.
@@ -137,6 +141,8 @@ int main() {
 
           double steer_value = result[0];
           double throttle_value = result[1];
+          prev_delta = steer_value;
+          prev_a = throttle_value;
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
@@ -192,6 +198,9 @@ int main() {
           //
           // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
           // SUBMITTING.
+          //
+          // See comments in MPC.cpp for details about my plan for
+          // handling latency.
           this_thread::sleep_for(chrono::milliseconds(100));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
