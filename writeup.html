@@ -1,0 +1,418 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<title>Model Predictive Control(MPC)</title>
+<!-- 2017-08-23 周三 14:51 -->
+<meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta  name="generator" content="Org-mode" />
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  .title  { text-align: center; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { color: green; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #ccc;
+    box-shadow: 3px 3px 3px #eee;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: visible;
+    padding-top: 1.2em;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    background-color: white;
+    top: -10px;
+    right: 10px;
+    padding: 3px;
+    border: 1px solid black;
+  }
+  pre.src:hover:before { display: inline;}
+  pre.src-sh:before    { content: 'sh'; }
+  pre.src-bash:before  { content: 'sh'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-R:before     { content: 'R'; }
+  pre.src-perl:before  { content: 'Perl'; }
+  pre.src-java:before  { content: 'Java'; }
+  pre.src-sql:before   { content: 'SQL'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.right  { text-align: center;  }
+  th.left   { text-align: center;   }
+  th.center { text-align: center; }
+  td.right  { text-align: right;  }
+  td.left   { text-align: left;   }
+  td.center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara:nth-child(2) { display: inline; }
+  .footpara { display: block; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  /*]]>*/-->
+</style>
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2013 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+<script type="text/javascript" src="http://orgmode.org/mathjax/MathJax.js"></script>
+<script type="text/javascript">
+<!--/*--><![CDATA[/*><!--*/
+    MathJax.Hub.Config({
+        // Only one of the two following lines, depending on user settings
+        // First allows browser-native MathML display, second forces HTML/CSS
+        //  config: ["MMLorHTML.js"], jax: ["input/TeX"],
+            jax: ["input/TeX", "output/HTML-CSS"],
+        extensions: ["tex2jax.js","TeX/AMSmath.js","TeX/AMSsymbols.js",
+                     "TeX/noUndefined.js"],
+        tex2jax: {
+            inlineMath: [ ["\\(","\\)"] ],
+            displayMath: [ ['$$','$$'], ["\\[","\\]"], ["\\begin{displaymath}","\\end{displaymath}"] ],
+            skipTags: ["script","noscript","style","textarea","pre","code"],
+            ignoreClass: "tex2jax_ignore",
+            processEscapes: false,
+            processEnvironments: true,
+            preview: "TeX"
+        },
+        showProcessingMessages: true,
+        displayAlign: "center",
+        displayIndent: "2em",
+
+        "HTML-CSS": {
+             scale: 100,
+             availableFonts: ["STIX","TeX"],
+             preferredFont: "TeX",
+             webFont: "TeX",
+             imageFont: "TeX",
+             showMathMenu: true,
+        },
+        MMLorHTML: {
+             prefer: {
+                 MSIE:    "MML",
+                 Firefox: "MML",
+                 Opera:   "HTML",
+                 other:   "HTML"
+             }
+        }
+    });
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">Model Predictive Control(MPC)</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#sec-1">Rubric Points</a>
+<ul>
+<li><a href="#sec-1-1">The Model</a></li>
+<li><a href="#sec-1-2">Timestep Length and Elapsed Duration(N &amp; dt)</a></li>
+<li><a href="#sec-1-3">Polynomial Fitting and MPC Preprocessing</a></li>
+<li><a href="#sec-1-4">Model Predictive Control with Latency</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-sec-1" class="outline-2">
+<h2 id="sec-1">Rubric Points</h2>
+<div class="outline-text-2" id="text-1">
+</div><div id="outline-container-sec-1-1" class="outline-3">
+<h3 id="sec-1-1">The Model</h3>
+<div class="outline-text-3" id="text-1-1">
+<p>
+Student describes their model in detail. This includes the state,
+actuators and update equations.
+</p>
+<hr  />
+
+<p>
+The model I used is much like the one in the lecture. In the model there're 
+6 states and 2 acturator inputs:
+</p>
+
+<ul class="org-ul">
+<li>States:
+<ul class="org-ul">
+<li>\(x\) - x component of location of the vehicle, in vehicle coordinate
+</li>
+<li>\(y\) - y component of location of the vehicle, in vehicle coordinate
+</li>
+<li>\(\psi\) - angle between the current orientation of the vehicle
+and the initial longitudinal direction of the vehicle
+</li>
+<li>\(v\) - longitudinal velocity of the vehicle
+</li>
+<li>\(\mathrm{cte}\) - cross track error
+</li>
+<li>\(e_{\psi}\) - orientation error
+</li>
+</ul>
+</li>
+<li>Inputs:
+<ul class="org-ul">
+<li>\(\delta\) - acturator for turning
+</li>
+<li>\(a\) - acturator for trottle
+</li>
+</ul>
+</li>
+</ul>
+
+<p>
+The update equations for the model are defined as following:
+</p>
+
+\begin{align}
+x_{t+1} &= x_t + v_t * \cos(\psi_t) * \Delta t \\
+
+y_{t+1} &= y_t + v_t * \sin(\psi_t) * \Delta t \\
+
+\psi_{t+1} &= \psi_t + \frac{v_t}{L_f} * \delta_t * \Delta t \\
+
+v_{t+1} &= v_t + a_t * \Delta t\\
+
+\mathrm{cte}_{t+1} &= \mathrm{cte}_t + v_t * \sin(e_{\psi_t}) * \Delta t \\
+                   &= (y_t - y_t^{ref}) + v_t * \sin(e_{\psi_t}) * \Delta t \\
+
+e_{\psi_{t+1}} &= e_{\psi_t} + \frac{v_t}{L_f} * \delta_t * \Delta t\\
+               &= (\psi_t - \psi_t^{ref}) + \frac{v_t}{L_f} * \delta_t * \Delta t\\
+
+y_t^{ref} &= f(x_t) \\
+
+\psi_t^{ref} &= \arctan(f'(x_t))\\
+\end{align}
+
+<p>
+where \(f\) is the polynomial fit for waypoints. \(x_0 = 0, y_0 = 0,
+\psi_0 = 0\) since I'm using vehicle coordinate. \(v_0\) is set to the
+speed feedback from the simulator.
+</p>
+</div>
+</div>
+
+<div id="outline-container-sec-1-2" class="outline-3">
+<h3 id="sec-1-2">Timestep Length and Elapsed Duration(N &amp; dt)</h3>
+<div class="outline-text-3" id="text-1-2">
+<p>
+Student discusses the reasoning behind the chosen N (timestep length)
+and dt (elapsed duration between timesteps) values. Additionally the
+student details the previous values tried.
+</p>
+<hr  />
+
+<p>
+Following with the MPC to line quiz, the initial N and dt I chose was
+25 and 0.05. This was not a bad choice for driving slowly in this
+project. When I turned to higher speed, things got wrong. 
+</p>
+
+<p>
+The reasons for this are:
+</p>
+
+<ol class="org-ol">
+<li>There's 100ms latency. The decision from MPC can only be actually
+carried out after 100ms. For setting dt=0.5, MPC would get wrong
+prediction of how the vehicle would be in the next coming future.
+</li>
+
+<li>The reference trajectory comes from polynomial fitting for 6
+waypoints(that's what the simulator give). The trajectory is only
+effective within the paths which the 6 waypoints cover. At higher
+speed, the greater N is, the deeper the future paths MPC will look
+into. When the paths MPC is predicting exceeds the effective paths,
+\(\mathrm{cte}\) and \(e_{\psi}\) are no longer meaningful. Not
+suprisingly, MPC will give out a wrong path.
+</li>
+</ol>
+
+<p>
+So I've reduced N and increased dt for my MPC implementation. The
+final N I used is 10 and dt is 0.1 + 0.05.
+</p>
+</div>
+</div>
+
+<div id="outline-container-sec-1-3" class="outline-3">
+<h3 id="sec-1-3">Polynomial Fitting and MPC Preprocessing</h3>
+<div class="outline-text-3" id="text-1-3">
+<p>
+A polynomial is fitted to waypoints.
+</p>
+
+<p>
+If the student preprocesses waypoints, the vehicle state, and/or
+actuators prior to the MPC procedure it is described.
+</p>
+<hr  />
+
+<p>
+Waypoints are transformed from map coordinate to vehicle coordinate
+before polynomial is fit. For two reasons polynomial is better fit
+in vehicle coordinate:
+</p>
+
+<ol class="org-ol">
+<li>The fit polynomial is a single-value function in the form \(y = f(x)
+   = a_n * x^n + a_{n-1} * x^{n-1} + \cdots + a_1 * x + a_0\) . \(f\) is
+a single-value function implies 1 value in codomain maps to at most
+1 value in domain. In map coordinate, this is not an easy
+condition.  While in vehicle coordinate, this can be meet without
+many difficulties as long as there is no extreme sharp turns and
+\(e_{\psi}\) won't getting to large.
+</li>
+
+<li>The formulas for \(\mathrm{cte}\) and \(e_{\psi}\) will be more involed in
+map coordinate. Take how to calculate the initial \(\mathrm{cte}_0\)
+for example. In map coordinate, that would be the euclidean
+distance between \((x_0, y_0)\) and \((x_0^{ref}, y_0^{ref})\) :
+
+<p>
+$$ \sqrt{(x_0 - x_0^{ref})^2 + (y_0 - y_0^{ref})^2} $$
+</p>
+
+<p>
+In vehicle coordinate, that would simply be \(y_0^{ref} =
+   f(x_0^{ref}) = f(x_0)\) .
+</p>
+</li>
+</ol>
+
+<p>
+In vehicle coordinates, the initial states for vehicle are very
+simple.  The vehicle is now located in the origin, with head direction
+matching the orientation of the x-axis, so \(x_0 = 0, y_0 = 0, \psi_0 =
+0\) . \(v_0\) is longitudinal speed so no conversions needed. Actuator
+values are not affected by coodinate system changing.
+</p>
+</div>
+</div>
+
+<div id="outline-container-sec-1-4" class="outline-3">
+<h3 id="sec-1-4">Model Predictive Control with Latency</h3>
+<div class="outline-text-3" id="text-1-4">
+<p>
+The student implements Model Predictive Control that handles a 100
+millisecond latency. Student provides details on how they deal with
+latency.
+</p>
+<hr  />
+
+<p>
+The net effect of 100ms latency is, the decision from MPC can only be
+carried out after 100ms. I modeled the latency into the model in the
+following way. 
+</p>
+
+<p>
+Supposed in timestep \(t\) , the inputs are \(\delta_t\) and \(a_t\) . With
+the existence of latency, the vehicle will keep moving for 100ms with
+\(\delta_t\) and \(a_t\) . If cooperating the latency into \(dt\), say, \(dt'
+= dt + \mathrm{latency}\), the MPC will then use inputs at timestep \(t\)
+and predict the trajectory after \(dt'\) seconds, finding an optimal
+action (\(\delta_{t+1}\) and \(a_{t+1}\)) to perform at timestep \(t+1\) and
+issue at timestep \(t\). Since \(dt' > 100\mathrm{ms}\) , the action
+issued at \(t\) can be effectively carried out at \(t+1\) . That should
+solve the latency problem.
+</p>
+
+<p>
+Besides, I also takes inputs from MPC previously solved and set them
+as fixed initial inputs because now the MPC can only effectively
+change future inputs. Inputs at timestep \(t = 1\) are used for
+actuators feeding to the simulator instead of those at timestep \(t =
+0\) (the initial timestep).
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="date">Created: 2017-08-23 周三 14:51</p>
+<p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 25.1.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
+<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>
