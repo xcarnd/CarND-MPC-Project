@@ -1,13 +1,16 @@
 #+TITLE: Model Predictive Control(MPC)
-#+OPTIONS: num:0
+#+AUTHOR: Chen, Zhuhui
 
 * Rubric Points
 
 ** The Model
 
+#+BEGIN_QUOTE
+
 Student describes their model in detail. This includes the state,
 actuators and update equations.
------
+
+#+END_QUOTE
 
 The model I used is much like the one in the lecture. In the model there're 
 6 states and 2 acturator inputs:
@@ -28,22 +31,15 @@ The update equations for the model are defined as following:
 
 \begin{align}
 x_{t+1} &= x_t + v_t * \cos(\psi_t) * \Delta t \\
-
 y_{t+1} &= y_t + v_t * \sin(\psi_t) * \Delta t \\
-
 \psi_{t+1} &= \psi_t + \frac{v_t}{L_f} * \delta_t * \Delta t \\
-
 v_{t+1} &= v_t + a_t * \Delta t\\
-
 \mathrm{cte}_{t+1} &= \mathrm{cte}_t + v_t * \sin(e_{\psi_t}) * \Delta t \\
                    &= (y_t - y_t^{ref}) + v_t * \sin(e_{\psi_t}) * \Delta t \\
-
 e_{\psi_{t+1}} &= e_{\psi_t} + \frac{v_t}{L_f} * \delta_t * \Delta t\\
                &= (\psi_t - \psi_t^{ref}) + \frac{v_t}{L_f} * \delta_t * \Delta t\\
-
 y_t^{ref} &= f(x_t) \\
-
-\psi_t^{ref} &= \arctan(f'(x_t))\\
+\psi_t^{ref} &= \arctan(f'(x_t))
 \end{align}
 
 where $f$ is the polynomial fit for waypoints. $x_0 = 0, y_0 = 0,
@@ -52,14 +48,17 @@ speed feedback from the simulator.
 
 ** Timestep Length and Elapsed Duration(N & dt)
 
+#+BEGIN_QUOTE
+
 Student discusses the reasoning behind the chosen N (timestep length)
 and dt (elapsed duration between timesteps) values. Additionally the
 student details the previous values tried.
------
+
+#+END_QUOTE
 
 Following with the MPC to line quiz, the initial N and dt I chose was
 25 and 0.05. This was not a bad choice for driving slowly in this
-project. When I turned to higher speed, things got wrong. 
+project. When I turned to higher speed, things got wrong.
 
 The reasons for this are:
 
@@ -79,11 +78,15 @@ So I've reduced N and increased dt for my MPC implementation. The
 final N I used is 10 and dt is 0.1 + 0.05.
 
 ** Polynomial Fitting and MPC Preprocessing
+
+#+BEGIN_QUOTE
+
 A polynomial is fitted to waypoints.
 
 If the student preprocesses waypoints, the vehicle state, and/or
 actuators prior to the MPC procedure it is described.
------
+
+#+END_QUOTE
 
 Waypoints are transformed from map coordinate to vehicle coordinate
 before polynomial is fit. For two reasons polynomial is better fit
@@ -114,10 +117,14 @@ matching the orientation of the x-axis, so $x_0 = 0, y_0 = 0, \psi_0 =
 values are not affected by coodinate system changing.
 
 ** Model Predictive Control with Latency
+
+#+BEGIN_QUOTE
+
 The student implements Model Predictive Control that handles a 100
 millisecond latency. Student provides details on how they deal with
 latency.
------
+
+#+END_QUOTE
 
 The net effect of 100ms latency is, the decision from MPC can only be
 carried out after 100ms. I modeled the latency into the model in the
