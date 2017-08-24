@@ -201,8 +201,10 @@ int main() {
           //
           // See comments in MPC.cpp for details about my plan for
           // handling latency.
+          //          std::cout<<"cal done:"<<chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count()<<std::endl;
           this_thread::sleep_for(chrono::milliseconds(100));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+          //          std::cout<<"sent:"<<chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count()<<std::endl;
         }
       } else {
         // Manual driving

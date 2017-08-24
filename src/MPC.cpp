@@ -56,7 +56,7 @@ double deg2rad(double x) { return x * pi() / 180; }
 // This is the length from front to CoG that has a similar radius.
 constexpr double Lf = 2.67;
 
-double v_ref = mph_to_mps(50.0);
+double v_ref = mph_to_mps(80.0);
 
 class FG_eval {
  public:
@@ -104,12 +104,12 @@ class FG_eval {
     // minimize actuators used
     for (std::size_t i = 0; i < N - 1; ++i) {
       fg[0] += 500 * CppAD::pow(vars[delta_start + i], 2);
-      fg[0] += CppAD::pow(3 * vars[a_start + i], 2);
+      fg[0] += 3 * CppAD::pow(vars[a_start + i], 2);
     }
 
     // minimize the gap between two consecutive inputs
     for (std::size_t i = 0; i < N - 2; ++i) {
-      fg[0] += 100 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
+      fg[0] += 300 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
       fg[0] += 10 * CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
     }
 
