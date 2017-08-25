@@ -120,15 +120,17 @@ int main() {
           // psi is also 0 if all points are converted into vehicle coordinates
           // cte is calculated as y_ref - py (y_ref = f(px) where f is the polynomial fit)
           // epsi is calculated as psi_ref - psi = psi_ref (psi_ref = atan(f'(px)))
-          double y_ref = polyeval(coeffs, px);
-          double psi_ref = std::atan(polyeval(coeffs_d, px));
+          double y_ref = polyeval(coeffs, 0);
+          double psi_ref = std::atan(polyeval(coeffs_d, 0));
+
+          //          std::cout<<coeffs<<std::endl;
           
           Eigen::VectorXd initial_state(8);
           initial_state <<
               0, 0,
               0,
               mph_to_mps(v),
-              (y_ref - py), (psi_ref - psi),
+              (y_ref - 0), (psi_ref - 0),
               prev_delta, prev_a;
 
           /*
